@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "249187302079",
+    "project_id": "blordgroup-chatapp",
+    "storage_bucket": "blordgroup-chatapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249187302079:android:df7fa67c5bad535a4ee40a",
+        "android_client_info": {
+          "package_name": "com.example.blord"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "249187302079-96rtl4ab8n3q91v1dgs94skdh5o5jfru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvJwIgrpujei3WpvJ1QDITHBoJTfjtHyM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249187302079-96rtl4ab8n3q91v1dgs94skdh5o5jfru.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
