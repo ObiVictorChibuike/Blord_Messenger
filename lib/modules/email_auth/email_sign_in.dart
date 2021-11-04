@@ -1,7 +1,13 @@
+import 'package:blord/helpers/progress_dialog_helper.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
+import 'package:blord/modules/home/dashboard.dart';
+import 'package:blord/services/auth_services.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:blord/widgets/custom_formfield.dart';
+import 'package:blord/helpers/flush_bar_helper.dart';
 import 'package:blord/widgets/primary_button.dart';
+import 'package:connectivity/connectivity.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:blord/utils/constant.dart';
@@ -15,6 +21,9 @@ class EmailSignUp extends StatefulWidget {
 
 class _EmailSignUpState extends State<EmailSignUp> {
 
+  //FirebaseAuth Initialization
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   //Keys
   final _formKey = GlobalKey<FormState>();
   final scaffoldKey = GlobalKey<ScaffoldState>();
@@ -26,6 +35,32 @@ class _EmailSignUpState extends State<EmailSignUp> {
   //FormField Controllers
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
+
+  //Sign Up
+  void _createUser(BuildContext context, {required String email, required String password}) async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
+      await _auth.createUserWithEmailAndPassword(email: email, password: password).then((value){
+        CustomProgressDialog().popCustomProgressDialogDialog(context);
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context)=>Dashboard()));
+      }).catchError((error){
+        print(error.code);
+        if (error.code == "email-already-in-use"){
+          alertBar(context, "Email already in use", AppTheme.red);
+        }
+      });
+    }
+  }
+
+  //Check network connection before login
+  void checkSignUpConnectivity(BuildContext context, {required String email, required String password}) async{
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (!(connectivityResult == ConnectivityResult.none)) {
+      FocusScope.of(context).unfocus();
+      _createUser(context, email: email, password: password);
+    }else{alertBar(context, "No network connection", AppTheme.red);}}
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +114,8 @@ class _EmailSignUpState extends State<EmailSignUp> {
                 SizedBox(height: 20.h),
                 PrimaryButton(
                   onPressed: () {
-                    //google signing
+                    //Sign up
+                    checkSignUpConnectivity(context, email: _emailController.text.trim(), password: _passwordController.text.trim());
                   },
                   btnText: "Sign Up",
                   color: HexColor("#005CEE"),

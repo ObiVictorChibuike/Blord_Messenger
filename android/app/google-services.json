@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "249187302079-331g96s9iaq75r18tjg65krkiqgb5sl1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.blord",
+            "certificate_hash": "9aeb609d9c2fc858c14650215b4d2168daaf9863"
+          }
+        },
+        {
           "client_id": "249187302079-96rtl4ab8n3q91v1dgs94skdh5o5jfru.apps.googleusercontent.com",
           "client_type": 3
         }

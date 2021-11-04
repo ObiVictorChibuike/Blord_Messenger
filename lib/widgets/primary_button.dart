@@ -6,12 +6,14 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback onPressed;
   final String btnText;
   final Color color;
+  final Widget? btnImage;
 
   const PrimaryButton(
       {Key? key,
       required this.onPressed,
       required this.btnText,
-      required this.color})
+      required this.color,
+        this.btnImage,})
       : super(key: key);
 
   @override
@@ -24,9 +26,12 @@ class PrimaryButton extends StatelessWidget {
           decoration: BoxDecoration(
               color: color, borderRadius: BorderRadius.circular(10.sp)),
           alignment: Alignment.center,
-          child: Text(
-            btnText,
-            style: txtStyle(),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              btnImage ?? Container(),
+              Text (btnText, style: txtStyle(),),
+            ],
           )),
     );
   }

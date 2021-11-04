@@ -28,8 +28,9 @@ dependencies:
   ndialog: ^4.1.0
   another_flushbar:
   connectivity: ^3.0.6
-  shared_preferences:
   cloud_firestore: ^2.5.4
+  google_sign_in: ^5.1.0
+  shared_preferences: ^2.0.7
 
 
   # The following adds the Cupertino Icons font to your application.

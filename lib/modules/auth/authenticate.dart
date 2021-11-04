@@ -1,7 +1,11 @@
+import 'package:blord/helpers/progress_dialog_helper.dart';
+import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
 import 'package:blord/modules/home/home.dart';
+import 'package:blord/services/auth_services.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:blord/widgets/primary_button.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:blord/utils/constant.dart';
@@ -33,9 +37,23 @@ class _AuthenticateState extends State<Authenticate> {
             PrimaryButton(
               onPressed: () {
                 //google signing
-                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) {return Home();
-                }), (route) => false);
+                CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
+                AuthClass().signWithGoogle().then((UserCredential? value) {
+                  CustomProgressDialog().popCustomProgressDialogDialog(context);
+                  if (value != null){
+                    final result = value.user;
+                    SharedPreferenceHelper().saveUserEmail(result!.email!);
+                    SharedPreferenceHelper().saveUserId(result.uid);
+                    SharedPreferenceHelper().saveUserName(result.email!.replaceAll("@gmail.com", ""));
+                    SharedPreferenceHelper().saveDisplayName(result.displayName!);
+                    SharedPreferenceHelper().saveUserProfileUrl(result.photoURL!);
+                  }
+                  final displayName = value!.user!.displayName;
+                  print(displayName);
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context)=>Home()));
+                });
               },
+              btnImage: Image.asset(ConstanceData.google),
               btnText: "Continue with Google",
               color: HexColor("#005CEE"),
             ),
@@ -44,6 +62,7 @@ class _AuthenticateState extends State<Authenticate> {
               onPressed: () {
                 //google signing
               },
+              btnImage: Image.asset(ConstanceData.facebook),
               btnText: "Continue with Facebook",
               color: HexColor("#005CEE"),
             ),
@@ -51,9 +70,9 @@ class _AuthenticateState extends State<Authenticate> {
             PrimaryButton(
               onPressed: () {
                 //google signing
-                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) {return EmailLogin();
-                }), (route) => false);
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EmailLogin()));
               },
+              btnImage: Image.asset(ConstanceData.email),
               btnText: "Continue with Email",
               color: HexColor("#005CEE"),
             )
