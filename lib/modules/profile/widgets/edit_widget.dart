@@ -5,9 +5,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 class EditWidget extends StatelessWidget {
   final String title;
   final TextEditingController controller;
+  final String? hintText;
+  final void Function(String?)? onSaved;
+  final String? errorText;
 
-  const EditWidget({Key? key, required this.title, required this.controller})
-      : super(key: key);
+  const EditWidget({Key? key, required this.title, required this.controller, this.hintText, this.onSaved, this.errorText}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +37,9 @@ class EditWidget extends StatelessWidget {
                 fontWeight: FontWeight.w400,
               ),
             ),
-            TextField(
+            TextFormField(
+              onSaved: onSaved,
+              controller: controller,
               style: TextStyle(
                 fontFamily: ConstanceData.nunitoFont,
                 fontSize: 16.sp,
@@ -43,13 +47,14 @@ class EditWidget extends StatelessWidget {
                 color: theme.backgroundColor,
               ),
               decoration: InputDecoration(
+                errorText: errorText,
                 border: InputBorder.none,
-                hintText: controller.text,
+                hintText: hintText,
                 hintStyle: TextStyle(
                   fontFamily: ConstanceData.nunitoFont,
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w700,
-                  color: theme.backgroundColor,
+                  color: AppTheme.grey.withOpacity(0.5),
                 ),
               ),
             )

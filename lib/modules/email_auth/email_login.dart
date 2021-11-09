@@ -20,7 +20,6 @@ class EmailLogin extends StatefulWidget {
 }
 
 class _EmailLoginState extends State<EmailLogin> {
-
   //Initializing firebaseAuth as _auth
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -44,8 +43,10 @@ class _EmailLoginState extends State<EmailLogin> {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context)=>Home()));
     }).catchError((error){
       if (error.code == "wrong-password") {
+        CustomProgressDialog().popCustomProgressDialogDialog(context);
         alertBar(context, "Wrong password", AppTheme.red);
       } else if (error.code == "user-not-found") {
+        CustomProgressDialog().popCustomProgressDialogDialog(context);
         alertBar(context, "User not found", AppTheme.red);
       }
     });
@@ -139,5 +140,12 @@ class _EmailLoginState extends State<EmailLogin> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

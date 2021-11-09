@@ -3,6 +3,7 @@ import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
 import 'package:blord/modules/home/home.dart';
 import 'package:blord/services/auth_services.dart';
+import 'package:blord/helpers/database_helper.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:blord/widgets/primary_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -47,10 +48,20 @@ class _AuthenticateState extends State<Authenticate> {
                     SharedPreferenceHelper().saveUserName(result.email!.replaceAll("@gmail.com", ""));
                     SharedPreferenceHelper().saveDisplayName(result.displayName!);
                     SharedPreferenceHelper().saveUserProfileUrl(result.photoURL!);
+                    Map <String, dynamic> userInfoMap = {
+                    "userId": value.user!.uid,
+                      "email": result.email!,
+                      "username": result.email!.replaceAll("@gmail.com", ""),
+                      "name": result.displayName!,
+                      "photoUrl": result.photoURL!,
+                      "phoneNumber": result.phoneNumber,
+                    };
+                    DataBaseHelper().addUserInfoToDB(result.uid, userInfoMap).then((value) {
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Home()));
+                    });
                   }
                   final displayName = value!.user!.displayName;
                   print(displayName);
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context)=>Home()));
                 });
               },
               btnImage: Image.asset(ConstanceData.google),
@@ -70,7 +81,7 @@ class _AuthenticateState extends State<Authenticate> {
             PrimaryButton(
               onPressed: () {
                 //google signing
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EmailLogin()));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => EmailLogin()));
               },
               btnImage: Image.asset(ConstanceData.email),
               btnText: "Continue with Email",

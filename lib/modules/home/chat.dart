@@ -1,22 +1,87 @@
-import 'package:blord/models/active_model.dart';
+import 'package:blord/helpers/database_helper.dart';
+import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/utils/constant.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:random_string/random_string.dart';
 
 class Chat extends StatefulWidget {
-  final Active recent;
+  final String image;
+  final String displayName;
 
-  const Chat({Key? key, required this.recent}) : super(key: key);
+  const Chat({Key? key, required this.image, required this.displayName}) : super(key: key);
 
   @override
   _ChatState createState() => _ChatState();
 }
-
 class _ChatState extends State<Chat> {
+
+  late String chatRoomId, messageId = "";
+  String? myName, myProfilePic, myUserName, myEmail;
+
   List<String> messages = [
     "Hello there",
   ];
+
+  getMyInfoFromSharedPreference() async {
+    myName = await SharedPreferenceHelper().getDisplayName();
+    myProfilePic = await SharedPreferenceHelper().getUserProfileUrl();
+    myUserName = await SharedPreferenceHelper().getUserName();
+    myEmail = await SharedPreferenceHelper().getUserEmail();
+    chatRoomId = getChatRoomIdByUserNames(widget.displayName, myUserName!);
+  }
+
+  getChatRoomIdByUserNames(String a, String b){
+    if(a.substring(0,1).codeUnitAt(0)> b.substring(0,1).codeUnitAt(0)){
+      return "$b\_$b";
+    } else{
+      return "$a\_$b";
+    }
+  }
+  addMessages(bool sendClicked){
+    if(_controller.text != ""){
+      String message = _controller.text;
+      var lastMessageTime = DateTime.now();
+
+      Map <String, dynamic> messageInfoMap = {
+        "message": messages,
+        "sendBy": myUserName,
+        "timeStamp": lastMessageTime,
+        "photoUrl": myProfilePic,
+      };
+      if(messageId == ""){messageId = randomAlphaNumeric(12);}
+      DataBaseHelper().addMessage(chatRoomId, messageId, messageInfoMap).then((value){
+        Map<String, dynamic> lastMessageInfoMap = {
+          "lastMessage" : message,
+          "lastMessageSentTime": lastMessageTime,
+          "lastMessageSendBy": myUserName,
+        };
+        DataBaseHelper().updateLastMessageSend(chatRoomId, lastMessageInfoMap);
+        if(sendClicked == true){
+          _controller.text = "";
+          messageId = "";
+          setState(() {});
+        }
+      });
+    }
+  }
+
+  getAndSetMessages() async {
+
+  }
+
+  doThisOnLaunch()async{
+    await getMyInfoFromSharedPreference();
+    getAndSetMessages();
+  }
+
+
+  @override
+  void initState() {
+    doThisOnLaunch();
+    super.initState();
+  }
 
   TextEditingController _controller = TextEditingController();
   @override
@@ -27,19 +92,12 @@ class _ChatState extends State<Chat> {
         brightness: Brightness.dark,
         backgroundColor: HexColor("#0C122B"),
         elevation: 0,
-        title: Text(
-          "Conversation",
-        ),
+        title: Text("Conversation"),
         actions: [
-          RotatedBox(
-            quarterTurns: 1,
+          RotatedBox(quarterTurns: 1,
             child: IconButton(
-              onPressed: () {
-                //more
-              },
-              icon: Icon(Icons.more_horiz),
-            ),
-          )
+              onPressed: () {},
+              icon: Icon(Icons.more_horiz),),)
         ],
       ),
       body: Container(
@@ -99,10 +157,14 @@ class _ChatState extends State<Chat> {
                                 bottomLeft: Radius.circular(10.sp),
                               )),
                           child: TextField(
+                            onChanged: (value){
+                              addMessages(false);
+                            },
+                            cursorHeight: 24,
                             style: txtStyle(),
                             controller: _controller,
                             decoration: InputDecoration(
-                              hintText: "Type your mail",
+                              hintText: "Type your messages",
                               border: InputBorder.none,
                               hintStyle: txtStyle(),
                             ),
@@ -116,6 +178,8 @@ class _ChatState extends State<Chat> {
                                 content: Text("Message cannot be empty")));
                           });
                         } else {
+                          addMessages(true);
+                          setState(() {});
                           setState(() {
                             messages.add(_controller.text.toString());
                             _controller.clear();
@@ -159,15 +223,16 @@ class _ChatState extends State<Chat> {
         children: [
           Row(
             children: [
-              Container(
-                height: 55.h,
-                width: 55.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: HexColor(widget.recent.color),
-                  image: DecorationImage(
-                    image: AssetImage(widget.recent.image),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(35),
+                child: Container(
+                  height: 55.h,
+                  width: 55.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: HexColor("#0C122B"),
                   ),
+                   child: Image.network(widget.image),
                 ),
               ),
               SizedBox(width: 17.w),
@@ -175,7 +240,7 @@ class _ChatState extends State<Chat> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.recent.username,
+                    widget.displayName,
                     style: TextStyle(
                       fontFamily: ConstanceData.dmSansFont,
                       fontSize: 14.sp,

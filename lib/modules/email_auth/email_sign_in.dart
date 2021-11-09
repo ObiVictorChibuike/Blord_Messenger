@@ -1,7 +1,8 @@
+import 'package:blord/helpers/database_helper.dart';
 import 'package:blord/helpers/progress_dialog_helper.dart';
+import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
-import 'package:blord/modules/home/dashboard.dart';
-import 'package:blord/services/auth_services.dart';
+import 'package:blord/modules/home/home.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:blord/widgets/custom_formfield.dart';
 import 'package:blord/helpers/flush_bar_helper.dart';
@@ -20,6 +21,8 @@ class EmailSignUp extends StatefulWidget {
 }
 
 class _EmailSignUpState extends State<EmailSignUp> {
+
+
 
   //FirebaseAuth Initialization
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -43,8 +46,23 @@ class _EmailSignUpState extends State<EmailSignUp> {
       CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
       await _auth.createUserWithEmailAndPassword(email: email, password: password).then((value){
         CustomProgressDialog().popCustomProgressDialogDialog(context);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context)=>Dashboard()));
-      }).catchError((error){
+          SharedPreferenceHelper().saveUserEmail(value.user!.email!);
+          SharedPreferenceHelper().saveUserEmail(value.user!.displayName!);
+          SharedPreferenceHelper().saveUserId(value.user!.uid);
+          SharedPreferenceHelper().saveUserProfileUrl(value.user!.photoURL!);
+          SharedPreferenceHelper().saveUserName(value.user!.email!.replaceAll("@gmail.com", ""));
+          Map <String, dynamic> userInfoMap = {
+            "userId": value.user!.uid,
+            "email": value.user!.email!,
+            "username": value.user!.email!.replaceAll("@gmail.com", ""),
+            "name": value.user!.displayName!,
+            "photoUrl": value.user!.photoURL!,
+            "phoneNumber": value.user!.phoneNumber!,
+          };
+        DataBaseHelper().addUserInfoToDB(value.user!.uid, userInfoMap).then((value) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Home()));
+        });
+        }).catchError((error){
         print(error.code);
         if (error.code == "email-already-in-use"){
           alertBar(context, "Email already in use", AppTheme.red);
@@ -135,5 +153,12 @@ class _EmailSignUpState extends State<EmailSignUp> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

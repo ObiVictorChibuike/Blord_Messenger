@@ -1,10 +1,13 @@
-import 'package:blord/models/active_model.dart';
-import 'package:blord/models/recent_model.dart';
+import 'package:blord/helpers/database_helper.dart';
+import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/home/chat.dart';
 import 'package:blord/utils/constant.dart';
 import 'package:blord/utils/theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 
 class ActiveStaff extends StatefulWidget {
   const ActiveStaff({Key? key}) : super(key: key);
@@ -14,30 +17,88 @@ class ActiveStaff extends StatefulWidget {
 }
 
 class _ActiveStaffState extends State<ActiveStaff> {
+  String? myName, myProfilePic, myUserName, myEmail;
+  TextEditingController _searchController = TextEditingController();
+  CollectionReference _firebaseFireStore = FirebaseFirestore.instance.collection("users");
+  bool isSearching = false;
+
+  getChatRoomIdByUserNames(String a, String b){
+    if(a.substring(0,1).codeUnitAt(0)> b.substring(0,1).codeUnitAt(0)){
+      return "$b\_$b";
+    } else{
+      return "$a\_$b";
+    }
+  }
+
+  getMyInfoFromSharedPreference() async {
+    myName = await SharedPreferenceHelper().getDisplayName();
+    myProfilePic = await SharedPreferenceHelper().getUserProfileUrl();
+    myUserName = await SharedPreferenceHelper().getUserName();
+    myEmail = await SharedPreferenceHelper().getUserEmail();
+  }
+
+
+  @override
+  void initState() {
+    getMyInfoFromSharedPreference();
+    super.initState();
+  }
+
+  onSearch(String value) async {
+    isSearching = true;
+    setState(() {});
+  }
+
+  Widget searchUserList(){
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firebaseFireStore.snapshots().asBroadcastStream(),
+        builder: (context,  AsyncSnapshot<QuerySnapshot> snapshot){
+          if  (snapshot.hasData){
+            final length = snapshot.data!.docs.where((QueryDocumentSnapshot<Object?> element) => element["username"].toString().contains(_searchController.text)).length;
+            return Expanded(
+              child: ListView(
+                children: [
+                  Row(children: [
+                    Text("$length Staff Available", style: styleText(),),
+                    Spacer(),
+                    IconButton(onPressed: () {}, icon: Icon(Icons.sort)), IconButton(onPressed: () {}, icon: Icon(Icons.swap_horiz)),]),
+                  ...snapshot.data!.docs.where((QueryDocumentSnapshot<Object?> element) => element["username"].toString().contains(_searchController.text)).map((QueryDocumentSnapshot<Object?> data){
+                    final String username = data["username"];final String image = data["photoUrl"];final String name = data["name"];
+                    return GestureDetector(
+                      onTap: (){
+                        print(myUserName);
+                        print(myName);
+                        var chatRoomId = getChatRoomIdByUserNames(myUserName!, myName!);
+                        Map<String, dynamic> chatRoomInfoMap ={"users": [myUserName, myName]};
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=> Chat(image: image, displayName: name,)));
+                        DataBaseHelper().createChatRoom(chatRoomId, chatRoomInfoMap);
+                      },
+                      child: ListTile(
+                        title: Text(username, style: TextStyle(fontSize: 17, fontFamily: ConstanceData.dmSansFont, fontWeight: FontWeight.w100, ),),
+                        leading: CircleAvatar(backgroundImage: NetworkImage(image),),),
+                    );})
+                ],
+              ),);
+          } else {
+            return Center(child: CupertinoActivityIndicator(),);
+          }
+        }
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: theme.accentColor,
-          elevation: 0,
-          iconTheme: IconThemeData(
-            color: theme.backgroundColor,
-          ),
-          title: Text(
-            "Active Staff",
-            style: TextStyle(color: theme.backgroundColor),
-          ),
+          backgroundColor: theme.accentColor, elevation: 0,
+          iconTheme: IconThemeData(color: theme.backgroundColor,),
+          title: Text("Active Staff", style: TextStyle(color: theme.backgroundColor),),
           actions: [
             IconButton(
-                onPressed: () {
-                  //more
-                },
-                icon: RotatedBox(
-                  quarterTurns: 1,
-                  child: Icon(
-                    Icons.more_horiz,
-                  ),
+                onPressed: () {}, icon: RotatedBox(quarterTurns: 1,
+                  child: Icon(Icons.more_horiz,),
                 ))
           ]),
       body: Container(
@@ -47,103 +108,59 @@ class _ActiveStaffState extends State<ActiveStaff> {
             children: [
               searchBar(),
               SizedBox(height: 25.h),
-              Row(children: [
-                Text(
-                  "8 Staff Available",
-                  style: styleText(),
-                ),
-                SizedBox(width: 130.w),
-                IconButton(
-                    onPressed: () {
-                      //reorder
-                    },
-                    icon: Icon(Icons.sort)),
-                IconButton(
-                    onPressed: () {
-                      //reorder
-                    },
-                    icon: Icon(Icons.swap_horiz)),
-              ]),
               SizedBox(height: 20.h),
-              Flexible(
-                child: ListView.builder(
-                  itemCount: allActive.length,
-                  itemBuilder: (_, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (BuildContext context) {
-                            return Chat(
-                              recent: allActive[index],
-                            );
-                          }),
-                        );
-                      },
-                      child: Container(
-                        height: 84.h,
-                        width: 342.w,
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 35.sp,
-                              backgroundColor: HexColor(allActive[index].color),
-                              child: Image.asset(
-                                allActive[index].image,
-                                height: 40.h,
-                              ),
-                            ),
-                            SizedBox(width: 15.w),
-                            Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    allActive[index].username,
-                                    style: TextStyle(
-                                      fontSize: 17.sp,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily: ConstanceData.dmSansFont,
-                                    ),
-                                  ),
-                                  SizedBox(height: 10.h),
-                                  Text(
-                                    allActive[index].gmail,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w400,
-                                      fontFamily: ConstanceData.dmSansFont,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ])
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              )
+              searchUserList(),
             ],
           )),
     );
   }
 
-  Container searchBar() {
+  Widget searchBar() {
     return Container(
-      height: 50.h,
-      width: 342.w,
-      decoration: BoxDecoration(
-          color: HexColor("#F5F8FC"),
-          borderRadius: BorderRadius.circular(10.sp)),
-      alignment: Alignment.center,
-      child: TextField(
-        style: txtStyle(),
-        decoration: InputDecoration(
-            border: InputBorder.none,
-            prefixIcon: Icon(Icons.search_rounded),
-            hintText: "Search by name",
-            hintStyle: txtStyle()),
+      child: Row(
+        children: [
+          isSearching ? Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: GestureDetector(
+              onTap: (){
+                isSearching = false;
+                _searchController.text = "";
+                setState(() {});
+              },
+                child: Icon(Icons.arrow_back)),
+          ) : Container(),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.only(left: 16),
+              height: 50.h,
+              width: 300.w,
+              decoration: BoxDecoration(
+                  color: HexColor("#F5F8FC"),
+                  borderRadius: BorderRadius.circular(10.sp)),
+              alignment: Alignment.center,
+              child: TextField(
+                onSubmitted: (value){
+                  onSearch(_searchController.text);
+                },
+                cursorHeight: 23,
+                controller: _searchController,
+                style: txtStyle(),
+                decoration: InputDecoration(
+                    border: InputBorder.none,
+                    suffixIcon: GestureDetector(
+                      onTap: (){
+                        if(_searchController.text != ""){
+                          onSearch(_searchController.text.trim());
+                          setState(() {});
+                        }
+                      },
+                        child: Icon(Icons.search_rounded)),
+                    hintText: "Search by name",
+                    hintStyle: txtStyle()),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

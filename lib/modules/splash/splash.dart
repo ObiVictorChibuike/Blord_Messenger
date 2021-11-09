@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'package:blord/modules/home/home.dart';
 import 'package:blord/modules/onboard/onboard.dart';
 import 'package:blord/utils/constant.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -13,15 +16,30 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> {
+  FirebaseAuth auth = FirebaseAuth.instance;
+
   @override
   void initState() {
+    startTime();
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(builder: (BuildContext context) {
-        return Onboarding();
-      }), (route) => false);
-    });
+    // Future.delayed(const Duration(seconds: 3), () {
+    //   Navigator.pushAndRemoveUntil(context,
+    //       MaterialPageRoute(builder: (BuildContext context) {
+    //     return Onboarding();
+    //   }), (route) => false);
+    // });
+  }
+  startTime() async {
+    var _duration = new Duration(seconds: 3);
+    return new Timer(_duration, navigationPage);
+  }
+
+  void navigationPage() {
+    if (auth.currentUser == null) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Onboarding()));
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Home()));
+    }
   }
 
   @override
@@ -40,33 +58,16 @@ class _SplashState extends State<Splash> {
               backgroundColor: theme.backgroundColor,
               body: Container(
                 child: Column(children: [
-                  Container(
-                    height: 183.h,
-                    width: 375.w,
-                    decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage(ConstanceData.firstVector),
-                        )),
-                  ),
+                  Container(height: 183.h, width: 375.w,
+                    decoration: BoxDecoration(image: DecorationImage(image: AssetImage(ConstanceData.firstVector),)),),
                   SizedBox(height: 54.h),
                   Center(
-                    child: Container(
-                      height: 276.h,
-                      width: 276.w,
-                      decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage(ConstanceData.appImage),
-                          )),
-                    ),
+                    child: Container(height: 276.h, width: 276.w,
+                      decoration: BoxDecoration(image: DecorationImage(image: AssetImage(ConstanceData.appImage),)),),
                   ),
                   Spacer(),
-                  Container(
-                    height: 183.h,
-                    width: 375.w,
-                    decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage(ConstanceData.secondVector),
-                        )),
+                  Container(height: 183.h, width: 375.w,
+                    decoration: BoxDecoration(image: DecorationImage(image: AssetImage(ConstanceData.secondVector),)),
                   ),
                 ]),
               ),
