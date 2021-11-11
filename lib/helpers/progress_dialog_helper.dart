@@ -5,8 +5,8 @@ import 'package:ndialog/ndialog.dart';
 
 class CustomProgressDialog{
 
-  showCustomAlertDialog(BuildContext context, String message) async {
-    await NDialog(
+  showCustomAlertDialog(BuildContext context, String message) {
+    return NDialog(
       dialogStyle: DialogStyle(titleDivider: true, contentTextStyle: TextStyle(fontFamily: 'Lato', fontWeight: FontWeight.w400, fontSize: 18, color: AppTheme.dark_blue),),
       title: Container(),
       content: Row(

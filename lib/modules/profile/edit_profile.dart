@@ -132,6 +132,7 @@ class _EditProfileState extends State<EditProfile> {
               GestureDetector(
                 onTap: (){
                   updateProfileData();
+                  setState(() {});
                 },
                 child: Container(height: 55.h, width: 327.w,
                   decoration: BoxDecoration(color: theme.backgroundColor, borderRadius: BorderRadius.circular(10.sp),),

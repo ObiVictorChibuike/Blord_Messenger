@@ -1,3 +1,4 @@
+import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DataBaseHelper{
@@ -5,10 +6,6 @@ class DataBaseHelper{
     await FirebaseFirestore.instance.collection("users").doc(userId).set(
         userInfoMap
     );
-  }
-
-  Future <Stream<QuerySnapshot?>> searchUserByName(String? userName) async {
-    return FirebaseFirestore.instance.collection("user").where("username", isEqualTo: userName).snapshots();
   }
   Future addMessage(String chatRoomId, String messageId, Map <String, dynamic> messageInfoMap) async{
     return FirebaseFirestore.instance.collection("chatrooms").doc(chatRoomId).collection("chats").doc(messageId).set(messageInfoMap);
@@ -25,5 +22,16 @@ class DataBaseHelper{
     }else{
       return FirebaseFirestore.instance.collection("chatrooms").doc(chatRoomId).set(userInfoMap);
     }
+  }
+  Future <Stream<QuerySnapshot>> getChatRoomMessages(chatRoomId)async {
+    return FirebaseFirestore.instance.collection("chatrooms").doc(chatRoomId).collection("chats").orderBy("timeStamp", descending: true).snapshots();
+  }
+  Future <Stream<QuerySnapshot>> getRecentChatList()async{
+    String?  myUserName = await SharedPreferenceHelper().getUserName();
+    return FirebaseFirestore.instance.collection("chatrooms").orderBy("lastMessageSentTime", descending:  true).where("user", arrayContains: myUserName).snapshots();
+  }
+
+  Future <QuerySnapshot>? getUserInfo (String? username){
+    FirebaseFirestore.instance.collection("users").where("username", isEqualTo: username).get();
   }
 }

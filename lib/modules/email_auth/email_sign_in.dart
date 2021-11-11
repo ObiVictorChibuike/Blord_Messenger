@@ -1,6 +1,4 @@
-import 'package:blord/helpers/database_helper.dart';
 import 'package:blord/helpers/progress_dialog_helper.dart';
-import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
 import 'package:blord/modules/home/home.dart';
 import 'package:blord/utils/theme.dart';
@@ -22,6 +20,11 @@ class EmailSignUp extends StatefulWidget {
 
 class _EmailSignUpState extends State<EmailSignUp> {
 
+ late String getUserEmailFromEmailPasswordLogin;
+ late String getUserUserIdFromEmailPasswordLogin;
+ late String getUserDisplayNameFromEmailPasswordLogin;
+ late String getUserPhotoUrlFromEmailPasswordLogin;
+ late String getUserUserNameFromEmailPasswordLogin;
 
 
   //FirebaseAuth Initialization
@@ -44,28 +47,21 @@ class _EmailSignUpState extends State<EmailSignUp> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
-      await _auth.createUserWithEmailAndPassword(email: email, password: password).then((value){
-        CustomProgressDialog().popCustomProgressDialogDialog(context);
-          SharedPreferenceHelper().saveUserEmail(value.user!.email!);
-          SharedPreferenceHelper().saveUserEmail(value.user!.displayName!);
-          SharedPreferenceHelper().saveUserId(value.user!.uid);
-          SharedPreferenceHelper().saveUserProfileUrl(value.user!.photoURL!);
-          SharedPreferenceHelper().saveUserName(value.user!.email!.replaceAll("@gmail.com", ""));
-          Map <String, dynamic> userInfoMap = {
-            "userId": value.user!.uid,
-            "email": value.user!.email!,
-            "username": value.user!.email!.replaceAll("@gmail.com", ""),
-            "name": value.user!.displayName!,
-            "photoUrl": value.user!.photoURL!,
-            "phoneNumber": value.user!.phoneNumber!,
-          };
-        DataBaseHelper().addUserInfoToDB(value.user!.uid, userInfoMap).then((value) {
+      await _auth.createUserWithEmailAndPassword(email: email, password: password).then((value) async {
+        // setState(() {
+        //   getUserEmailFromEmailPasswordLogin = value.user!.email!;
+        //   getUserUserIdFromEmailPasswordLogin = value.user!.uid;
+        //   getUserPhotoUrlFromEmailPasswordLogin = value.user!.photoURL == null? "" : value.user!.photoURL!;
+        //   getUserDisplayNameFromEmailPasswordLogin = value.user!.displayName == null ? "" : value.user!.displayName!;
+        //   getUserUserNameFromEmailPasswordLogin = value.user!.email!.replaceAll("@gmail.com", "");
+        // });
+        print(value.user!.photoURL!);
+          CustomProgressDialog().popCustomProgressDialogDialog(context);
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Home()));
-        });
         }).catchError((error){
-        print(error.code);
         if (error.code == "email-already-in-use"){
           alertBar(context, "Email already in use", AppTheme.red);
+          CustomProgressDialog().popCustomProgressDialogDialog(context);
         }
       });
     }

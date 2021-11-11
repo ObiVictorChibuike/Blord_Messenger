@@ -1,9 +1,17 @@
+import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/home/dashboard.dart';
 import 'package:blord/modules/ion/ion.dart';
 import 'package:blord/modules/profile/profile.dart';
 import 'package:flutter/material.dart';
 
 class Home extends StatefulWidget {
+  final String? getUserEmailFromEmailPasswordLogin;
+  final String? getUserUserIdFromEmailPasswordLogin;
+  final String? getUserDisplayNameFromEmailPasswordLogin;
+  final String? getUserPhotoUrlFromEmailPasswordLogin;
+  final String? getUserUserNameFromEmailPasswordLogin;
+  Home({this.getUserEmailFromEmailPasswordLogin, this.getUserUserIdFromEmailPasswordLogin, this.getUserDisplayNameFromEmailPasswordLogin, this.getUserPhotoUrlFromEmailPasswordLogin, this.getUserUserNameFromEmailPasswordLogin});
+
   @override
   _HomeState createState() => _HomeState();
 }
@@ -24,6 +32,17 @@ class _HomeState extends State<Home> {
       selectedIndex = index;
     });
   }
+
+
+  // @override
+  // void initState() {
+  //   SharedPreferenceHelper().saveUserEmail(widget.getUserEmailFromEmailPasswordLogin!);
+  //   SharedPreferenceHelper().saveUserId(widget.getUserUserIdFromEmailPasswordLogin!);
+  //   SharedPreferenceHelper().saveUserName(widget.getUserUserNameFromEmailPasswordLogin!);
+  //   SharedPreferenceHelper().saveDisplayName(widget.getUserDisplayNameFromEmailPasswordLogin!);
+  //   SharedPreferenceHelper().saveUserProfileUrl(widget.getUserPhotoUrlFromEmailPasswordLogin!);
+  //   super.initState();
+  // }
 
   onItemTapped(int selectedIndex) {
     _pageController.jumpToPage(selectedIndex);

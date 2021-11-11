@@ -35,6 +35,7 @@ class _ActiveStaffState extends State<ActiveStaff> {
     myProfilePic = await SharedPreferenceHelper().getUserProfileUrl();
     myUserName = await SharedPreferenceHelper().getUserName();
     myEmail = await SharedPreferenceHelper().getUserEmail();
+    //setState(() {});
   }
 
 
@@ -69,7 +70,7 @@ class _ActiveStaffState extends State<ActiveStaff> {
                         print(myUserName);
                         print(myName);
                         var chatRoomId = getChatRoomIdByUserNames(myUserName!, myName!);
-                        Map<String, dynamic> chatRoomInfoMap ={"users": [myUserName, myName]};
+                        Map<String, dynamic> chatRoomInfoMap ={"users": [myUserName!, myName!]};
                         Navigator.push(context, MaterialPageRoute(builder: (context)=> Chat(image: image, displayName: name,)));
                         DataBaseHelper().createChatRoom(chatRoomId, chatRoomInfoMap);
                       },
@@ -77,10 +78,9 @@ class _ActiveStaffState extends State<ActiveStaff> {
                         title: Text(username, style: TextStyle(fontSize: 17, fontFamily: ConstanceData.dmSansFont, fontWeight: FontWeight.w100, ),),
                         leading: CircleAvatar(backgroundImage: NetworkImage(image),),),
                     );})
-                ],
-              ),);
+                ],),);
           } else {
-            return Center(child: CupertinoActivityIndicator(),);
+            return Center(child: CupertinoActivityIndicator(radius: 20,),);
           }
         }
     );

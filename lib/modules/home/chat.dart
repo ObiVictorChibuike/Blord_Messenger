@@ -2,6 +2,8 @@ import 'package:blord/helpers/database_helper.dart';
 import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/utils/constant.dart';
 import 'package:blord/utils/theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:random_string/random_string.dart';
@@ -16,13 +18,11 @@ class Chat extends StatefulWidget {
   _ChatState createState() => _ChatState();
 }
 class _ChatState extends State<Chat> {
-
-  late String chatRoomId, messageId = "";
-  String? myName, myProfilePic, myUserName, myEmail;
-
-  List<String> messages = [
-    "Hello there",
-  ];
+   Stream? streamMessages;
+   String? chatRoomId;
+   String? messageId = "";
+   String? myName, myProfilePic, myUserName, myEmail;
+   late Map<String, dynamic> lastMessageInfoMap;
 
   getMyInfoFromSharedPreference() async {
     myName = await SharedPreferenceHelper().getDisplayName();
@@ -39,36 +39,39 @@ class _ChatState extends State<Chat> {
       return "$a\_$b";
     }
   }
-  addMessages(bool sendClicked){
+  addMessages(bool sendClicked) {
     if(_controller.text != ""){
       String message = _controller.text;
       var lastMessageTime = DateTime.now();
-
       Map <String, dynamic> messageInfoMap = {
-        "message": messages,
+        "message": message,
         "sendBy": myUserName,
         "timeStamp": lastMessageTime,
         "photoUrl": myProfilePic,
       };
       if(messageId == ""){messageId = randomAlphaNumeric(12);}
-      DataBaseHelper().addMessage(chatRoomId, messageId, messageInfoMap).then((value){
-        Map<String, dynamic> lastMessageInfoMap = {
+      DataBaseHelper().addMessage(chatRoomId!, messageId!, messageInfoMap).then((value){
+        lastMessageInfoMap = {
           "lastMessage" : message,
           "lastMessageSentTime": lastMessageTime,
           "lastMessageSendBy": myUserName,
         };
-        DataBaseHelper().updateLastMessageSend(chatRoomId, lastMessageInfoMap);
-        if(sendClicked == true){
+        setState(() {
           _controller.text = "";
           messageId = "";
-          setState(() {});
-        }
+        });
       });
+    } else if (sendClicked) {
+      DataBaseHelper().updateLastMessageSend(chatRoomId!, lastMessageInfoMap);
+      _controller.text = "";
+      messageId = "";
     }
   }
 
-  getAndSetMessages() async {
 
+  getAndSetMessages() async {
+    streamMessages = await DataBaseHelper().getChatRoomMessages(chatRoomId);
+    setState(() {});
   }
 
   doThisOnLaunch()async{
@@ -81,6 +84,27 @@ class _ChatState extends State<Chat> {
   void initState() {
     doThisOnLaunch();
     super.initState();
+  }
+
+  Widget chatMessageTile(String message, bool sendByMe){
+    return Row(
+      mainAxisAlignment: sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(color: Theme.of(context).backgroundColor,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(15.sp),
+              bottomRight: sendByMe ? Radius.circular(0) : Radius.circular(15.sp),
+              topRight: Radius.circular(15.sp),
+              bottomLeft: sendByMe ? Radius.circular(15.sp) : Radius.circular(0),
+            ),),
+          alignment: Alignment.center,
+          padding: EdgeInsets.all(16),
+          child: Text(message,  style: TextStyle(fontWeight: FontWeight.w500, fontFamily: ConstanceData.dmSansFont, fontSize: 14.sp, color: Theme.of(context).accentColor),),
+        ),
+      ],
+    );
   }
 
   TextEditingController _controller = TextEditingController();
@@ -105,46 +129,23 @@ class _ChatState extends State<Chat> {
           children: [
             headerWiget(theme),
             SizedBox(height: 50.h),
-            Flexible(
+            Expanded(
+              child: StreamBuilder<dynamic>(
+                stream: streamMessages,
+                builder: (context, snapshot){
+                  return snapshot.hasData ?
+                  ListView.builder(
+                  itemCount: snapshot.data!.docs.length,
+                    reverse: true,
+                    itemBuilder: (context, index){
+                    DocumentSnapshot ds = snapshot.data!.docs[index];
+                    return chatMessageTile(ds["message"], myUserName == ds["sendBy"]);},
+                  ) : Center(child: CupertinoActivityIndicator(),);
+              },)),
+            Padding(padding: EdgeInsets.only(bottom: 10.h),
               child: Container(
-                child: ListView.builder(
-                    itemCount: messages.length,
-                    itemBuilder: (_, index) {
-                      var left = 2 * messages[index].length;
-                      var height = messages[index].length * 0.25;
-                      return Padding(
-                        padding: EdgeInsets.only(
-                            left: 260 - left.w, right: 24.w, bottom: 15.h),
-                        child: Container(
-                          height: 40 + height + height,
-                          width: 90.w,
-                          decoration: BoxDecoration(
-                            color: theme.backgroundColor,
-                            borderRadius: BorderRadius.circular(15.sp),
-                          ),
-                          alignment: Alignment.center,
-                          padding: EdgeInsets.all(5.h),
-                          child: Expanded(
-                            child: Text(
-                              messages[index],
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontFamily: ConstanceData.dmSansFont,
-                                fontSize: 14.sp,
-                                color: theme.accentColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(bottom: 10.h),
-              child: Container(
-                height: 50.h,
-                width: 350.w,
+                alignment: Alignment.bottomCenter,
+                height: 50.h, width: 350.w,
                 child: Row(
                   children: [
                     Expanded(
@@ -157,14 +158,14 @@ class _ChatState extends State<Chat> {
                                 bottomLeft: Radius.circular(10.sp),
                               )),
                           child: TextField(
-                            onChanged: (value){
-                              addMessages(false);
-                            },
+                            textCapitalization: TextCapitalization.sentences,
+                            // onChanged: (value){
+                            //   addMessages(false);},
                             cursorHeight: 24,
                             style: txtStyle(),
                             controller: _controller,
                             decoration: InputDecoration(
-                              hintText: "Type your messages",
+                              hintText: "Type a message",
                               border: InputBorder.none,
                               hintStyle: txtStyle(),
                             ),
@@ -172,20 +173,9 @@ class _ChatState extends State<Chat> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        if (_controller.text.isEmpty) {
-                          setState(() {
-                            Scaffold.of(context).showSnackBar(SnackBar(
-                                content: Text("Message cannot be empty")));
-                          });
-                        } else {
+                          FocusScope.of(context).unfocus();
                           addMessages(true);
-                          setState(() {});
-                          setState(() {
-                            messages.add(_controller.text.toString());
-                            _controller.clear();
-                          });
-                        }
-                      },
+                          },
                       child: Container(
                         width: 45.w,
                         decoration: BoxDecoration(
@@ -263,7 +253,7 @@ class _ChatState extends State<Chat> {
           ),
           SizedBox(height: 18.h),
           Text(
-            "This Is Private Message, Between You And Budddy.\nThis Chat Is End to End Encrypted...",
+            "This Is Private Message, Between You And ${widget.displayName}.\nThis Chat Is End to End Encrypted...",
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 14.sp,
