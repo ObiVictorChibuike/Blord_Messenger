@@ -1,5 +1,6 @@
 import 'package:blord/helpers/flush_bar_helper.dart';
 import 'package:blord/helpers/progress_dialog_helper.dart';
+import 'package:blord/models/user.dart';
 import 'package:blord/modules/profile/widgets/edit_widget.dart';
 import 'package:blord/utils/constant.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,19 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class EditProfile extends StatefulWidget {
-  final String ? username;
-  final String? email;
-  final String? image;
-  final String? displayName;
-  final String? phoneNumber;
-   const EditProfile({Key? key, this.username, this.email, this.image, this.displayName, this.phoneNumber}) : super(key: key);
+  final AuthUser user;
+  const EditProfile({Key? key, required this.user, }) : super(key: key);
 
   @override
   _EditProfileState createState() => _EditProfileState();
 }
 
 class _EditProfileState extends State<EditProfile> {
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -48,14 +44,14 @@ class _EditProfileState extends State<EditProfile> {
       numberController.text.trim().length < 11 ? numberValid = false : numberValid = true;
     });
     if (emailValid && nameValid && usernameValid){
-      CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
+      CustomProgressDialog().showDialog(context, "Please wait...");
       collection.doc((FirebaseAuth.instance.currentUser)!.uid).update({
         "username": usernameController.text.trim(),
         "email": emailController.text.trim(),
         "name": nameController.text.trim(),
         "phoneNumber": numberController.text.trim(),
       }).then((value){
-        CustomProgressDialog().popCustomProgressDialogDialog(context);
+        CustomProgressDialog().hideDialog(context);
         alertBar(context, "Profile updated", AppTheme.red);
         setState(() {});
       });
@@ -111,10 +107,12 @@ class _EditProfileState extends State<EditProfile> {
                     Align(
                       alignment: Alignment.center,
                       child: Container(height: 80.h, width: 80.w,
-                        decoration: BoxDecoration(border: Border.all(color: theme.accentColor, width: 3), shape: BoxShape.circle),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(50),
-                            child: Image.network(widget.image ?? "https://www.kindpng.com/picc/m/24-248253_user-profile-default-image-png-clipart-png-download.png")),
+                        decoration: BoxDecoration(border: Border.all(color: theme.accentColor, width: 3), shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: NetworkImage(widget.user.urlAvatar),
+                            fit: BoxFit.cover,
+                          )
+                        ),
                       ),
                     )
                   ],
@@ -122,10 +120,10 @@ class _EditProfileState extends State<EditProfile> {
               ),
               SizedBox(height: 50.h),
 
-              EditWidget(title: "FullName", controller: nameController = TextEditingController(text: widget.displayName == null ? "" : widget.displayName), hintText: "Update FullName", errorText: nameValid ? null: "Name is too short",),
-              EditWidget(title: "Email", controller: emailController = TextEditingController(text: widget.email == null ? "": widget.email), hintText: "Update Email", errorText: emailValid ? null : "Email cannot be empty",),
-              EditWidget(title: "Phone Number", controller: numberController = TextEditingController(text: widget.phoneNumber == null ? "" : widget.phoneNumber), hintText: "Update Phone Number",),
-              EditWidget(title: "Username", controller: usernameController = TextEditingController(text: widget.username == null ? "": widget.username), hintText: "Update Username", errorText: usernameValid ? null : "User name is too short",),
+              EditWidget(title: "FullName", controller: nameController = TextEditingController(text: widget.user.name == null ? "" : widget.user.name), hintText: "Update FullName", errorText: nameValid ? null: "Name is too short",),
+              EditWidget(title: "Email", controller: emailController = TextEditingController(text: widget.user.email), hintText: "Update Email", errorText: emailValid ? null : "Email cannot be empty",),
+              EditWidget(title: "Phone Number", controller: numberController = TextEditingController(text: widget.user.phoneNumber == null ? "" : widget.user.phoneNumber), hintText: "Update Phone Number",),
+              EditWidget(title: "Username", controller: usernameController = TextEditingController(text: widget.user.username), hintText: "Update Username", errorText: usernameValid ? null : "User name is too short",),
 
               SizedBox(height: 30.h),
 

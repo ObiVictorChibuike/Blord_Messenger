@@ -33,6 +33,7 @@ dependencies:
   shared_preferences:
   flutter_typeahead:
   random_string: ^2.3.1
+  intl:
 
 
   # The following adds the Cupertino Icons font to your application.

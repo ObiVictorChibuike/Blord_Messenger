@@ -17,7 +17,7 @@ class EditWidget extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Container(
-        height: 70.h,
+        // height: 70.h,
         width: 327.w,
         decoration: BoxDecoration(
             color: theme.accentColor,

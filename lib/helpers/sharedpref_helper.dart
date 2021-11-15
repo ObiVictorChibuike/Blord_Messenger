@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:blord/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceHelper {
@@ -7,30 +10,24 @@ class SharedPreferenceHelper {
   static String userEmailKey = "USEREMAILKEY";
   static String userProfilePicKey = "USERPROFILEKEY";
 
+  static String userData = "USERDATA";
+
+  String dummyImage = "https://www.kindpng.com/picc/m/24-248253_user-profile-default-image-png-clipart-png-download.png";
+
   //save data
-  Future<bool> saveUserName(String userName) async {
+  Future<void> saveUserData({required AuthUser user}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setString(userNameKey, userName);
+    prefs.setString(userData, jsonEncode(user.toJson()));
   }
 
-  Future<bool> saveUserEmail(String getUseremail) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setString(userEmailKey, getUseremail);
-  }
-
-  Future<bool> saveUserId(String getUserId) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setString(userIdKey, getUserId);
-  }
-
-  Future<bool> saveDisplayName(String getDisplayName) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setString(displayNameKey, getDisplayName);
-  }
-
-  Future<bool> saveUserProfileUrl(String getUserProfile) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setString(userProfilePicKey, getUserProfile);
+  Future<AuthUser?> getUserData() async {
+    final sharedPreferences = await SharedPreferences.getInstance();
+    String? data = sharedPreferences.getString(userData);
+    if (data != null) {
+      return AuthUser.fromJson(jsonDecode(data));
+    } else {
+      return null;
+    }
   }
 
   //get data
@@ -54,8 +51,9 @@ class SharedPreferenceHelper {
     return prefs.getString(displayNameKey);
   }
 
-  Future<String?> getUserProfileUrl() async {
+  Future<String?> getPictureUrl() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString(userProfilePicKey);
   }
+
 }

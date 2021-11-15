@@ -1,5 +1,4 @@
-import 'package:blord/modules/email_auth/email_login.dart';
-import 'package:blord/modules/email_auth/email_sign_in.dart';
+import 'package:blord/modules/email_auth/email_sign_up.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:blord/widgets/custom_formfield.dart';
 import 'package:blord/widgets/primary_button.dart';

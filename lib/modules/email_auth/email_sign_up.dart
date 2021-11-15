@@ -1,7 +1,10 @@
+import 'package:blord/api/firebase_api.dart';
 import 'package:blord/helpers/progress_dialog_helper.dart';
+import 'package:blord/helpers/sharedpref_helper.dart';
+import 'package:blord/models/user.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
-import 'package:blord/modules/home/home.dart';
 import 'package:blord/utils/theme.dart';
+import 'package:blord/utils/utils.dart';
 import 'package:blord/widgets/custom_formfield.dart';
 import 'package:blord/helpers/flush_bar_helper.dart';
 import 'package:blord/widgets/primary_button.dart';
@@ -19,13 +22,7 @@ class EmailSignUp extends StatefulWidget {
 }
 
 class _EmailSignUpState extends State<EmailSignUp> {
-
- late String getUserEmailFromEmailPasswordLogin;
- late String getUserUserIdFromEmailPasswordLogin;
- late String getUserDisplayNameFromEmailPasswordLogin;
- late String getUserPhotoUrlFromEmailPasswordLogin;
- late String getUserUserNameFromEmailPasswordLogin;
-
+  SharedPreferenceHelper sharedPreferenceHelper = SharedPreferenceHelper();
 
   //FirebaseAuth Initialization
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -42,27 +39,37 @@ class _EmailSignUpState extends State<EmailSignUp> {
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
 
+  String dummyImage = "https://www.kindpng.com/picc/m/24-248253_user-profile-default-image-png-clipart-png-download.png";
+
   //Sign Up
   void _createUser(BuildContext context, {required String email, required String password}) async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
-      await _auth.createUserWithEmailAndPassword(email: email, password: password).then((value) async {
-        // setState(() {
-        //   getUserEmailFromEmailPasswordLogin = value.user!.email!;
-        //   getUserUserIdFromEmailPasswordLogin = value.user!.uid;
-        //   getUserPhotoUrlFromEmailPasswordLogin = value.user!.photoURL == null? "" : value.user!.photoURL!;
-        //   getUserDisplayNameFromEmailPasswordLogin = value.user!.displayName == null ? "" : value.user!.displayName!;
-        //   getUserUserNameFromEmailPasswordLogin = value.user!.email!.replaceAll("@gmail.com", "");
-        // });
-        print(value.user!.photoURL!);
-          CustomProgressDialog().popCustomProgressDialogDialog(context);
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Home()));
-        }).catchError((error){
-        if (error.code == "email-already-in-use"){
-          alertBar(context, "Email already in use", AppTheme.red);
-          CustomProgressDialog().popCustomProgressDialogDialog(context);
-        }
+      CustomProgressDialog().showDialog(context, "Signing up...");
+      await _auth.createUserWithEmailAndPassword(email: email, password: password).then((UserCredential? value) async {
+        final result = value?.user;
+        AuthUser user = AuthUser(
+            idUser: result!.uid,
+            email: result.email!,
+            username: result.email!.replaceAll("@gmail.com", ""),
+            phoneNumber: result.phoneNumber ?? null,
+            name: result.displayName ?? null,
+            urlAvatar: result.photoURL ?? dummyImage,
+            lastMessageTime: Utils.getFormattedTimeDate(DateTime.now()),
+        );
+        await FirebaseApi.addUser(user).whenComplete(() {
+          sharedPreferenceHelper.saveUserData(user: user).whenComplete(() {
+            CustomProgressDialog().hideDialog(context);
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> EmailLogin()));
+            alertBar(context, "Registration successful,\nyou can now login to your account", Colors.green);
+          });
+        }).onError((error, stackTrace) {
+          CustomProgressDialog().hideDialog(context);
+          alertBar(context, "Oops! an error occurred, please try again", AppTheme.red);
+        });
+      }).onError((error, stackTrace){
+        CustomProgressDialog().hideDialog(context);
+        alertBar(context, "$error", AppTheme.red);
       });
     }
   }

@@ -4,22 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:ndialog/ndialog.dart';
 
 class CustomProgressDialog{
+  late NAlertDialog dialog;
 
-  showCustomAlertDialog(BuildContext context, String message) {
-    return NDialog(
-      dialogStyle: DialogStyle(titleDivider: true, contentTextStyle: TextStyle(fontFamily: 'Lato', fontWeight: FontWeight.w400, fontSize: 18, color: AppTheme.dark_blue),),
-      title: Container(),
+  showDialog(BuildContext context, String message) {
+    dialog = NAlertDialog(
+      dialogStyle: DialogStyle(titleDivider: true),
+      title: Text("Please wait"),
       content: Row(
         children: [
-          CupertinoActivityIndicator(radius: 15,),
-          SizedBox(width: 50,),
+          CupertinoActivityIndicator(radius: 20,),
+          SizedBox(width: 10,),
           Text(message),
         ],
       ),
-    ).show(context);
+      blur: 2,
+      dismissable: false,
+    );
+    dialog.show(context, transitionType: DialogTransitionType.Shrink);
   }
 
-  popCustomProgressDialogDialog(BuildContext context){
-    Navigator.of(context).pop();
+  hideDialog(BuildContext context){
+    Navigator.pop(context);
   }
 }

@@ -8,13 +8,15 @@ import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mvc_pattern/mvc_pattern.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  WidgetsFlutterBinding.ensureInitialized();
-  Firebase.initializeApp();
-  await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-    DeviceOrientation.portraitUp, DeviceOrientation.portraitDown
-  ]).then((_) => runApp(MyApp()));
+  await Firebase.initializeApp();
+  SystemChrome.setEnabledSystemUIOverlays([SystemUiOverlay.bottom, SystemUiOverlay.top]);
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  runApp(MyApp());
 }
 
 class MyApp extends AppMVC {
@@ -39,29 +41,6 @@ class MyApp extends AppMVC {
           );
         },
       ),
-    );
-  }
-}
-
-class WelcomePage extends StatefulWidget {
-  @override
-  _WelcomePageState createState() => _WelcomePageState();
-}
-
-class _WelcomePageState extends State<WelcomePage> {
-  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      // Initialize FlutterFire:
-      future: _initialization,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Container(
-            child: Center(child: Text('Something went wrong, please reload', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400, fontFamily: 'Poppins'),),),);}
-        if (snapshot.connectionState == ConnectionState.done) {return Splash();}
-        return Center(child: CircularProgressIndicator(),);
-      },
     );
   }
 }

@@ -1,113 +1,69 @@
-import 'package:blord/helpers/database_helper.dart';
-import 'package:blord/helpers/sharedpref_helper.dart';
+import 'package:blord/api/firebase_api.dart';
+import 'package:blord/models/message.dart';
+import 'package:blord/models/user.dart';
 import 'package:blord/utils/constant.dart';
 import 'package:blord/utils/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:random_string/random_string.dart';
 
 class Chat extends StatefulWidget {
-  final String image;
-  final String displayName;
-
-  const Chat({Key? key, required this.image, required this.displayName}) : super(key: key);
+  final AuthUser receiver, sender;
+  const Chat({Key? key, required this.receiver, required this.sender, }) : super(key: key);
 
   @override
   _ChatState createState() => _ChatState();
 }
+
 class _ChatState extends State<Chat> {
-   Stream? streamMessages;
-   String? chatRoomId;
-   String? messageId = "";
-   String? myName, myProfilePic, myUserName, myEmail;
-   late Map<String, dynamic> lastMessageInfoMap;
-
-  getMyInfoFromSharedPreference() async {
-    myName = await SharedPreferenceHelper().getDisplayName();
-    myProfilePic = await SharedPreferenceHelper().getUserProfileUrl();
-    myUserName = await SharedPreferenceHelper().getUserName();
-    myEmail = await SharedPreferenceHelper().getUserEmail();
-    chatRoomId = getChatRoomIdByUserNames(widget.displayName, myUserName!);
-  }
-
-  getChatRoomIdByUserNames(String a, String b){
-    if(a.substring(0,1).codeUnitAt(0)> b.substring(0,1).codeUnitAt(0)){
-      return "$b\_$b";
-    } else{
-      return "$a\_$b";
-    }
-  }
-  addMessages(bool sendClicked) {
-    if(_controller.text != ""){
-      String message = _controller.text;
-      var lastMessageTime = DateTime.now();
-      Map <String, dynamic> messageInfoMap = {
-        "message": message,
-        "sendBy": myUserName,
-        "timeStamp": lastMessageTime,
-        "photoUrl": myProfilePic,
-      };
-      if(messageId == ""){messageId = randomAlphaNumeric(12);}
-      DataBaseHelper().addMessage(chatRoomId!, messageId!, messageInfoMap).then((value){
-        lastMessageInfoMap = {
-          "lastMessage" : message,
-          "lastMessageSentTime": lastMessageTime,
-          "lastMessageSendBy": myUserName,
-        };
-        setState(() {
-          _controller.text = "";
-          messageId = "";
-        });
-      });
-    } else if (sendClicked) {
-      DataBaseHelper().updateLastMessageSend(chatRoomId!, lastMessageInfoMap);
-      _controller.text = "";
-      messageId = "";
-    }
-  }
-
-
-  getAndSetMessages() async {
-    streamMessages = await DataBaseHelper().getChatRoomMessages(chatRoomId);
-    setState(() {});
-  }
-
-  doThisOnLaunch()async{
-    await getMyInfoFromSharedPreference();
-    getAndSetMessages();
-  }
-
+  var firebaseUser = FirebaseAuth.instance.currentUser;
+  TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
-    doThisOnLaunch();
     super.initState();
   }
 
-  Widget chatMessageTile(String message, bool sendByMe){
+  sendMessage() async {
+    if (_controller.text.isNotEmpty) {
+      String message = _controller.text.trim();
+      FocusScope.of(context).unfocus();
+      await FirebaseApi.uploadMessage(widget.receiver.idUser, widget.sender, message).whenComplete(() {
+        _controller.clear();
+      });
+    }
+  }
+
+  Widget chatMessageTile(String message, bool sendByMe) {
     return Row(
       mainAxisAlignment: sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
         Container(
           margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(color: Theme.of(context).backgroundColor,
+          decoration: BoxDecoration(
+            color: Theme.of(context).backgroundColor,
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(15.sp),
               bottomRight: sendByMe ? Radius.circular(0) : Radius.circular(15.sp),
               topRight: Radius.circular(15.sp),
               bottomLeft: sendByMe ? Radius.circular(15.sp) : Radius.circular(0),
-            ),),
+            ),
+          ),
           alignment: Alignment.center,
           padding: EdgeInsets.all(16),
-          child: Text(message,  style: TextStyle(fontWeight: FontWeight.w500, fontFamily: ConstanceData.dmSansFont, fontSize: 14.sp, color: Theme.of(context).accentColor),),
+          child: Text(message, style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: ConstanceData.dmSansFont,
+                fontSize: 14.sp,
+                color: Theme.of(context).accentColor),
+          ),
         ),
       ],
     );
   }
 
-  TextEditingController _controller = TextEditingController();
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
@@ -118,86 +74,96 @@ class _ChatState extends State<Chat> {
         elevation: 0,
         title: Text("Conversation"),
         actions: [
-          RotatedBox(quarterTurns: 1,
+          RotatedBox(
+            quarterTurns: 1,
             child: IconButton(
               onPressed: () {},
-              icon: Icon(Icons.more_horiz),),)
+              icon: Icon(Icons.more_horiz),
+            ),
+          )
         ],
       ),
-      body: Container(
-        child: Column(
-          children: [
-            headerWiget(theme),
-            SizedBox(height: 50.h),
-            Expanded(
-              child: StreamBuilder<dynamic>(
-                stream: streamMessages,
-                builder: (context, snapshot){
-                  return snapshot.hasData ?
-                  ListView.builder(
-                  itemCount: snapshot.data!.docs.length,
-                    reverse: true,
-                    itemBuilder: (context, index){
-                    DocumentSnapshot ds = snapshot.data!.docs[index];
-                    return chatMessageTile(ds["message"], myUserName == ds["sendBy"]);},
-                  ) : Center(child: CupertinoActivityIndicator(),);
-              },)),
-            Padding(padding: EdgeInsets.only(bottom: 10.h),
-              child: Container(
-                alignment: Alignment.bottomCenter,
-                height: 50.h, width: 350.w,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                          padding: EdgeInsets.only(left: 15.w),
-                          decoration: BoxDecoration(
-                              color: HexColor("#EBECEF"),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(10.sp),
-                                bottomLeft: Radius.circular(10.sp),
-                              )),
-                          child: TextField(
-                            textCapitalization: TextCapitalization.sentences,
-                            // onChanged: (value){
-                            //   addMessages(false);},
-                            cursorHeight: 24,
-                            style: txtStyle(),
-                            controller: _controller,
-                            decoration: InputDecoration(
-                              hintText: "Type a message",
-                              border: InputBorder.none,
-                              hintStyle: txtStyle(),
-                            ),
+      body: Column(
+        children: [
+          headerWiget(theme),
+          SizedBox(height: 50.h),
+          Expanded(child: StreamBuilder<QuerySnapshot<Message>>(
+            stream: FirebaseApi.getMessages(widget.receiver.idUser),
+            builder: (context, snapshot) {
+              switch (snapshot.connectionState) {
+                case ConnectionState.waiting:
+                  return Center(child: CircularProgressIndicator());
+                default:
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Something went wrong'));
+                  } else {
+                    final messages = snapshot.requireData;
+                    return messages.docs.isEmpty
+                        ? Center(child: Text('No messages yet, Start a conversation'))
+                        : ListView.builder(
+                      physics: BouncingScrollPhysics(),
+                      reverse: true,
+                      itemCount: messages.size,
+                      itemBuilder: (context, index) {
+                        Message message = messages.docs[index].data();
+                        return chatMessageTile(message.message, firebaseUser!.uid == message.idUser);
+                      },
+                    );
+                  }
+              }
+            },
+          )),
+          Container(
+            margin: EdgeInsets.only(bottom: 10.h),
+            height: 50.h,
+            width: 350.w,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                      padding: EdgeInsets.only(left: 15.w),
+                      decoration: BoxDecoration(
+                          color: HexColor("#EBECEF"),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(10.sp),
+                            bottomLeft: Radius.circular(10.sp),
                           )),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                          FocusScope.of(context).unfocus();
-                          addMessages(true);
-                          },
-                      child: Container(
-                        width: 45.w,
-                        decoration: BoxDecoration(
-                            color: HexColor("#5D5FEF"),
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(10.sp),
-                              bottomRight: Radius.circular(10.sp),
-                            )),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.send_sharp,
-                          color: theme.accentColor,
+                      child: TextField(
+                        textCapitalization: TextCapitalization.sentences,
+                        // onChanged: (value){
+                        //   addMessages(false);},
+                        cursorHeight: 24,
+                        style: txtStyle(),
+                        controller: _controller,
+                        decoration: InputDecoration(
+                          hintText: "Type a message",
+                          border: InputBorder.none,
+                          hintStyle: txtStyle(),
                         ),
-                      ),
-                    )
-                  ],
+                      )),
                 ),
-              ),
-            )
-          ],
-        ),
-      ),
+                GestureDetector(
+                  onTap: ()=> sendMessage(),
+                  child: Container(
+                    width: 45.w,
+                    decoration: BoxDecoration(
+                        color: HexColor("#5D5FEF"),
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(10.sp),
+                          bottomRight: Radius.circular(10.sp),
+                        )),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.send_sharp,
+                      color: theme.accentColor,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          )
+        ],
+      )
     );
   }
 
@@ -222,7 +188,7 @@ class _ChatState extends State<Chat> {
                     shape: BoxShape.circle,
                     color: HexColor("#0C122B"),
                   ),
-                   child: Image.network(widget.image),
+                  child: Image.network("${widget.receiver.urlAvatar}", fit: BoxFit.cover,),
                 ),
               ),
               SizedBox(width: 17.w),
@@ -230,7 +196,7 @@ class _ChatState extends State<Chat> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.displayName,
+                    "${widget.receiver.username}",
                     style: TextStyle(
                       fontFamily: ConstanceData.dmSansFont,
                       fontSize: 14.sp,
@@ -253,7 +219,7 @@ class _ChatState extends State<Chat> {
           ),
           SizedBox(height: 18.h),
           Text(
-            "This Is Private Message, Between You And ${widget.displayName}.\nThis Chat Is End to End Encrypted...",
+            "This Is Private Message, Between You And ${widget.receiver.username}.\nThis Chat Is End to End Encrypted...",
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 14.sp,

@@ -1,72 +1,83 @@
-import 'package:blord/helpers/database_helper.dart';
+import 'package:blord/api/firebase_api.dart';
 import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/models/recent_model.dart';
+import 'package:blord/models/user.dart';
 import 'package:blord/modules/home/active_staff.dart';
 import 'package:blord/modules/notifcation/notification.dart';
 import 'package:blord/utils/constant.dart';
 import 'package:blord/widgets/user_avatar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'chat.dart';
+
 class Dashboard extends StatefulWidget {
-  final String? getUserEmailFromEmailPasswordLogin;
-  final String? getUserUserIdFromEmailPasswordLogin;
-  final String? getUserDisplayNameFromEmailPasswordLogin;
-  final String? getUserPhotoUrlFromEmailPasswordLogin;
-  final String? getUserUserNameFromEmailPasswordLogin;
-  const Dashboard({Key? key, this.getUserEmailFromEmailPasswordLogin, this.getUserUserIdFromEmailPasswordLogin, this.getUserDisplayNameFromEmailPasswordLogin, this.getUserPhotoUrlFromEmailPasswordLogin, this.getUserUserNameFromEmailPasswordLogin}) : super(key: key);
+  const Dashboard({Key? key}) : super(key: key);
 
   @override
   _DashboardState createState() => _DashboardState();
 }
 
 class _DashboardState extends State<Dashboard> {
+  SharedPreferenceHelper sharedPreferenceHelper = SharedPreferenceHelper();
+  var firebaseUser = FirebaseAuth.instance.currentUser;
+  AuthUser? authUser;
 
-  String? myName, myProfilePic, myUserName, myEmail;
-  Stream? recentChatStream;
-
-  getMyInfoFromSharedPreference() async {
-    myName = await SharedPreferenceHelper().getDisplayName();
-    myProfilePic = await SharedPreferenceHelper().getUserProfileUrl();
-    myUserName = await SharedPreferenceHelper().getUserName();
-    myEmail = await SharedPreferenceHelper().getUserEmail();
-    setState(() {});
+  initData() async {
+    await sharedPreferenceHelper.getUserData().then((value){
+      setState(() {
+        authUser = value;
+      });
+    });
   }
-
-  getRecentChatList() async{
-    recentChatStream = await DataBaseHelper().getRecentChatList();
-    setState(() {});
-  }
-  onScreenLoading() async{
-    await getMyInfoFromSharedPreference();
-    getRecentChatList();
-  }
-
 
   @override
   void initState() {
-    onScreenLoading();
+    initData();
     super.initState();
   }
 
 
   Widget recentChatList(){
-    return StreamBuilder<dynamic>(
-      stream: recentChatStream,
+    return StreamBuilder<QuerySnapshot<AuthUser>>(
+        stream: FirebaseApi.getUsers(),
         builder: (context, snapshot){
-        return snapshot.hasData ? Padding(
-          padding: EdgeInsets.only(bottom: 5.h),
-          child: ListView.builder(
-              itemCount: snapshot.data.docs.length,
-            shrinkWrap: true,
-            itemBuilder: (context, index){
-                DocumentSnapshot ds = snapshot.data.docs[index];
-                return RecentChatTile(chatRoomId: ds.id,lastMessage: ds["lastMessage"],myUserName: myUserName,);
-            },
-          ),
-        ) : Center(child: CupertinoActivityIndicator(radius: 20,));
+          switch (snapshot.connectionState) {
+            case ConnectionState.waiting:
+              return Center(child: CircularProgressIndicator());
+            default:
+              if (snapshot.hasError) {
+                return Center(child: Text('Something went wrong'));
+              } else {
+                final users = snapshot.requireData;
+                return users.docs.isEmpty
+                    ? Center(child: Text('No messages yet, Start a conversation')) :
+                ListView.builder(
+                  physics: BouncingScrollPhysics(),
+                  itemCount: users.size,
+                  itemBuilder: (context, index) {
+                    AuthUser user = users.docs[index].data();
+                    Widget widget;
+                    if (user.idUser != firebaseUser!.uid) {
+                      widget = RecentChatTile(onTap: () async {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => Chat(
+                          sender: authUser!,
+                          receiver: user,
+                        )),);},
+                        lastMessage:  user.username,
+                        lastMessageTime: user.lastMessageTime,
+                        profilePic: user.urlAvatar,
+                        sentBy: user.username,
+                      );
+                    }  else widget = const SizedBox();
+                    return widget;
+                  },
+                );
+              }
+          }
         }
     );
   }
@@ -82,19 +93,18 @@ class _DashboardState extends State<Dashboard> {
         actions: [
           IconButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) {return Notifications();
-                }));
+                Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) => Notifications()));
               },
               icon: Icon(Icons.notifications)),
-          UserAvatar(),
+          authUser == null ? const SizedBox() : UserAvatar(user: authUser!,),
           SizedBox(width: 20.w),
         ],
       ),
       backgroundColor: Colors.black,
-      body: Container(
+      body: authUser == null ? const SizedBox() : Container(
         padding: EdgeInsets.only(top: 40.h, left: 8.w, right: 8.w),
-        alignment: Alignment.centerLeft,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Container(
               height: 90.h,
               child: ListView.builder(
@@ -107,20 +117,18 @@ class _DashboardState extends State<Dashboard> {
                     );
                   })),
           SizedBox(height: 10.h),
-          Text(
-            "Recent Chats", style: TextStyle(fontFamily: ConstanceData.dmSansFont, fontSize: 24.sp, color: theme.accentColor, fontWeight: FontWeight.w700),
-          ),
+          Text("Recent Chats", style: TextStyle(fontFamily: ConstanceData.dmSansFont,
+              fontSize: 24.sp, color: theme.accentColor, fontWeight: FontWeight.w700),),
           SizedBox(height: 15.h),
-          Flexible(
-              child: recentChatList(),
+          Expanded(
+            child: recentChatList(),
           )
         ]),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: theme.primaryColor,
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) {return ActiveStaff();
-          }));
+          Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) => ActiveStaff()));
         },
         child: Icon(
           Icons.add,
@@ -174,17 +182,20 @@ class _DashboardState extends State<Dashboard> {
 }
 
 class RecentChatTile extends StatefulWidget {
-  final String? chatRoomId;
-  final String? lastMessage;
-  final String? myUserName;
-  const RecentChatTile({Key? key, this.chatRoomId, this.lastMessage, this.myUserName}) : super(key: key);
+  VoidCallback onTap;
+  String? profilePic;
+  String? lastMessageTime;
+  String? lastMessage;
+  String? sentBy;
+  RecentChatTile({Key? key, required this.onTap, required this.profilePic, required this.lastMessageTime,
+    required this.lastMessage, required this.sentBy}) : super(key: key);
 
   @override
   _RecentChatTileState createState() => _RecentChatTileState();
 }
 
 class _RecentChatTileState extends State<RecentChatTile> {
-  String? profilePicUrl = "", name, username = "";
+
   TextStyle txtStyle() {
     return TextStyle(
       fontSize: 12.sp,
@@ -197,47 +208,33 @@ class _RecentChatTileState extends State<RecentChatTile> {
 
   @override
   void initState() {
-    getThisUserInfo();
     super.initState();
   }
 
-  getThisUserInfo() async{
-    username = widget.chatRoomId!.replaceAll(widget.myUserName!, "").replaceAll("_", "");
-    QuerySnapshot? querySnapshot = await DataBaseHelper().getUserInfo(username);
-    name =  "${querySnapshot!.docs[0]["name"]}";
-    profilePicUrl =  "${querySnapshot.docs[0]["photoUrl"] }";
-    //setState(() {});
-  }
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Image.network(profilePicUrl!),
-      title: Text(name!,
-          style: TextStyle(
+      onTap: ()=> widget.onTap.call(),
+      leading: Image.network(widget.profilePic!),
+      title: Text(widget.sentBy!, style: TextStyle(
             fontFamily: ConstanceData.nunitoFont,
             fontSize: 18.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           )),
-      subtitle: Text(
-        widget.lastMessage!,
-        style: txtStyle(),
+      subtitle: Text(widget.lastMessage!, style: txtStyle(),),
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(widget.lastMessageTime!, style: TextStyle(color: Theme.of(context).primaryColor),),
+          SizedBox(height: 10.h),
+          // CircleAvatar(
+          //   color: theme.primaryColor,
+          //   child: index.toString(),
+          // )
+        ],
       ),
-      // trailing: Column(
-      //   crossAxisAlignment: CrossAxisAlignment.end,
-      //   mainAxisAlignment: MainAxisAlignment.center,
-      //   children: [
-      //     Text(
-      //       allRecent[index].time,
-      //       style: TextStyle(color: theme.primaryColor),
-      //     ),
-      //     SizedBox(height: 10.h),
-      //     circleAvatar(
-      //       color: theme.primaryColor,
-      //       text: index.toString(),
-      //     )
-      //   ],
-      // ),
     );
   }
 }

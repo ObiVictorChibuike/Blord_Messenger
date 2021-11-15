@@ -30,6 +30,7 @@ class PrimaryButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               btnImage ?? Container(),
+              SizedBox(width: 5),
               Text (btnText, style: txtStyle(),),
             ],
           )),

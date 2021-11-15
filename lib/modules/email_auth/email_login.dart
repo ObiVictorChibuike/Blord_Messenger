@@ -1,8 +1,12 @@
+import 'package:blord/api/firebase_api.dart';
 import 'package:blord/helpers/progress_dialog_helper.dart';
-import 'package:blord/modules/email_auth/email_sign_in.dart';
+import 'package:blord/helpers/sharedpref_helper.dart';
+import 'package:blord/models/user.dart';
+import 'package:blord/modules/email_auth/email_sign_up.dart';
 import 'package:blord/modules/email_auth/reset_password.dart';
 import 'package:blord/modules/home/home.dart';
 import 'package:blord/utils/theme.dart';
+import 'package:blord/utils/utils.dart';
 import 'package:blord/widgets/custom_formfield.dart';
 import 'package:blord/helpers/flush_bar_helper.dart';
 import 'package:blord/widgets/primary_button.dart';
@@ -20,8 +24,13 @@ class EmailLogin extends StatefulWidget {
 }
 
 class _EmailLoginState extends State<EmailLogin> {
+
   //Initializing firebaseAuth as _auth
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  SharedPreferenceHelper sharedPreferenceHelper = SharedPreferenceHelper();
+
+  String dummyImage = "https://www.kindpng.com/picc/m/24-248253_user-profile-default-image-png-clipart-png-download.png";
 
   //Form Validator
   final _passwordValidator = RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
@@ -35,20 +44,37 @@ class _EmailLoginState extends State<EmailLogin> {
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   //Login
   void _login(BuildContext context,{required String email, required String password}){
-    CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
-    _auth.signInWithEmailAndPassword(email: email, password: password).then((value) {
-      CustomProgressDialog().popCustomProgressDialogDialog(context);
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (BuildContext context)=>Home()));
-    }).catchError((error){
-      if (error.code == "wrong-password") {
-        CustomProgressDialog().popCustomProgressDialogDialog(context);
-        alertBar(context, "Wrong password", AppTheme.red);
-      } else if (error.code == "user-not-found") {
-        CustomProgressDialog().popCustomProgressDialogDialog(context);
-        alertBar(context, "User not found", AppTheme.red);
-      }
+    CustomProgressDialog().showDialog(context, "Signing in...");
+    _auth.signInWithEmailAndPassword(email: email, password: password).then((value) async {
+      final result = value.user;
+      AuthUser user = AuthUser(
+        idUser: result!.uid,
+        email: result.email!,
+        username: result.email!.replaceAll("@gmail.com", ""),
+        phoneNumber: result.phoneNumber ?? null,
+        name: result.displayName ?? null,
+        urlAvatar: result.photoURL ?? dummyImage,
+        lastMessageTime: Utils.getFormattedTimeDate(DateTime.now()),
+      );
+      await FirebaseApi.addUser(user).whenComplete(() {
+        sharedPreferenceHelper.saveUserData(user: user).whenComplete(() {
+          CustomProgressDialog().hideDialog(context);
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> Home()));
+        });
+      }).onError((error, stackTrace) {
+        CustomProgressDialog().hideDialog(context);
+        alertBar(context, "Oops! an error occurred, please try again", AppTheme.red);
+      });
+    }).onError((error, stackTrace){
+      CustomProgressDialog().hideDialog(context);
+      alertBar(context, "$error", AppTheme.red);
     });
   }
 
@@ -120,7 +146,7 @@ class _EmailLoginState extends State<EmailLogin> {
                 PrimaryButton(
                   onPressed: () {
                     //Login
-                    checkLoginConnectivity(context, email: _emailController.text.trim(), password: _passwordController.text.trim());
+                    checkLoginConnectivity(context, email: _emailController.text.trim(), password: _passwordController.text);
                   },
                   btnText: "Login",
                   color: HexColor("#005CEE"),

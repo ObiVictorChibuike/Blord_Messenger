@@ -1,15 +1,19 @@
+
+import 'package:blord/api/firebase_api.dart';
+import 'package:blord/helpers/flush_bar_helper.dart';
 import 'package:blord/helpers/progress_dialog_helper.dart';
 import 'package:blord/helpers/sharedpref_helper.dart';
+import 'package:blord/models/user.dart';
 import 'package:blord/modules/email_auth/email_login.dart';
 import 'package:blord/modules/home/home.dart';
 import 'package:blord/services/auth_services.dart';
-import 'package:blord/helpers/database_helper.dart';
+import 'package:blord/utils/constant.dart';
 import 'package:blord/utils/theme.dart';
+import 'package:blord/utils/utils.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:blord/widgets/primary_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:blord/utils/constant.dart';
 
 class Authenticate extends StatefulWidget {
   const Authenticate({Key? key}) : super(key: key);
@@ -19,6 +23,9 @@ class Authenticate extends StatefulWidget {
 }
 
 class _AuthenticateState extends State<Authenticate> {
+  SharedPreferenceHelper sharedPreferenceHelper = SharedPreferenceHelper();
+  String dummyImage = "https://www.kindpng.com/picc/m/24-248253_user-profile-default-image-png-clipart-png-download.png";
+
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
@@ -38,33 +45,9 @@ class _AuthenticateState extends State<Authenticate> {
             PrimaryButton(
               onPressed: () {
                 //google signing
-                CustomProgressDialog().showCustomAlertDialog(context, "Please wait...");
-                AuthClass().signWithGoogle().then((UserCredential? value) {
-                  CustomProgressDialog().popCustomProgressDialogDialog(context);
-                  if (value != null){
-                    final result = value.user;
-                    SharedPreferenceHelper().saveUserEmail(result!.email!);
-                    SharedPreferenceHelper().saveUserId(result.uid);
-                    SharedPreferenceHelper().saveUserName(result.email!.replaceAll("@gmail.com", ""));
-                    SharedPreferenceHelper().saveDisplayName(result.displayName!);
-                    SharedPreferenceHelper().saveUserProfileUrl(result.photoURL!);
-                    Map <String, dynamic> userInfoMap = {
-                    "userId": value.user!.uid,
-                      "email": result.email!,
-                      "username": result.email!.replaceAll("@gmail.com", ""),
-                      "name": result.displayName!,
-                      "photoUrl": result.photoURL!,
-                      "phoneNumber": result.phoneNumber,
-                    };
-                    DataBaseHelper().addUserInfoToDB(result.uid, userInfoMap).then((value) {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>Home()));
-                    });
-                  }
-                  final displayName = value!.user!.displayName;
-                  print(displayName);
-                });
+                _signInWithGoogle();
               },
-              btnImage: Image.asset(ConstanceData.google),
+              btnImage: Image.asset(ConstanceData.google, height: 30, width: 30,),
               btnText: "Continue with Google",
               color: HexColor("#005CEE"),
             ),
@@ -73,7 +56,7 @@ class _AuthenticateState extends State<Authenticate> {
               onPressed: () {
                 //google signing
               },
-              btnImage: Image.asset(ConstanceData.facebook),
+              btnImage: Image.asset(ConstanceData.facebook, height: 30, width: 30,),
               btnText: "Continue with Facebook",
               color: HexColor("#005CEE"),
             ),
@@ -83,7 +66,7 @@ class _AuthenticateState extends State<Authenticate> {
                 //google signing
                 Navigator.push(context, MaterialPageRoute(builder: (_) => EmailLogin()));
               },
-              btnImage: Image.asset(ConstanceData.email),
+              btnImage: Image.asset(ConstanceData.email, height: 30, width: 30,),
               btnText: "Continue with Email",
               color: HexColor("#005CEE"),
             )
@@ -91,5 +74,35 @@ class _AuthenticateState extends State<Authenticate> {
         ),
       ),
     );
+  }
+
+  _signInWithGoogle(){
+    CustomProgressDialog().showDialog(context, "Signing In...");
+    AuthClass().signWithGoogle().then((UserCredential? value) async {
+      if (value != null){
+        final result = value.user;
+        AuthUser user = AuthUser(
+            idUser: result!.uid,
+            email: result.email!,
+            username: result.email!.replaceAll("@gmail.com", ""),
+            phoneNumber: result.phoneNumber ?? null,
+            name: result.displayName ?? null,
+            urlAvatar: result.photoURL ?? dummyImage,
+          lastMessageTime: Utils.getFormattedTimeDate(DateTime.now()),
+        );
+        await FirebaseApi.addUser(user).whenComplete(() {
+          sharedPreferenceHelper.saveUserData(user: user).whenComplete(() {
+            CustomProgressDialog().hideDialog(context);
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> Home()));
+          });
+        }).onError((error, stackTrace) {
+          CustomProgressDialog().hideDialog(context);
+          alertBar(context, "Oops! an error occurred, please try again", AppTheme.red);
+        });
+      }
+    }).onError((error, stackTrace) {
+      CustomProgressDialog().hideDialog(context);
+      alertBar(context, "Oops! an error occurred, please try again", AppTheme.red);
+    });
   }
 }

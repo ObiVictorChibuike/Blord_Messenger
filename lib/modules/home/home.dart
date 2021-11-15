@@ -1,22 +1,17 @@
-import 'package:blord/helpers/sharedpref_helper.dart';
 import 'package:blord/modules/home/dashboard.dart';
 import 'package:blord/modules/ion/ion.dart';
 import 'package:blord/modules/profile/profile.dart';
 import 'package:flutter/material.dart';
 
 class Home extends StatefulWidget {
-  final String? getUserEmailFromEmailPasswordLogin;
-  final String? getUserUserIdFromEmailPasswordLogin;
-  final String? getUserDisplayNameFromEmailPasswordLogin;
-  final String? getUserPhotoUrlFromEmailPasswordLogin;
-  final String? getUserUserNameFromEmailPasswordLogin;
-  Home({this.getUserEmailFromEmailPasswordLogin, this.getUserUserIdFromEmailPasswordLogin, this.getUserDisplayNameFromEmailPasswordLogin, this.getUserPhotoUrlFromEmailPasswordLogin, this.getUserUserNameFromEmailPasswordLogin});
+  const Home({Key? key}) : super(key: key);
 
   @override
   _HomeState createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> {
+
   //selected index to track current page
   int selectedIndex = 0;
 
@@ -24,7 +19,7 @@ class _HomeState extends State<Home> {
   PageController _pageController = PageController();
 
   //list of pages
-  List<Widget> pages = [Dashboard(), Ion(), Profile()];
+  late List<Widget> pages;
 
   //naviagators
   void _onChanged(index) {
@@ -34,15 +29,11 @@ class _HomeState extends State<Home> {
   }
 
 
-  // @override
-  // void initState() {
-  //   SharedPreferenceHelper().saveUserEmail(widget.getUserEmailFromEmailPasswordLogin!);
-  //   SharedPreferenceHelper().saveUserId(widget.getUserUserIdFromEmailPasswordLogin!);
-  //   SharedPreferenceHelper().saveUserName(widget.getUserUserNameFromEmailPasswordLogin!);
-  //   SharedPreferenceHelper().saveDisplayName(widget.getUserDisplayNameFromEmailPasswordLogin!);
-  //   SharedPreferenceHelper().saveUserProfileUrl(widget.getUserPhotoUrlFromEmailPasswordLogin!);
-  //   super.initState();
-  // }
+  @override
+  void initState() {
+    pages = [Dashboard(), Ion(), Profile()];
+    super.initState();
+  }
 
   onItemTapped(int selectedIndex) {
     _pageController.jumpToPage(selectedIndex);
